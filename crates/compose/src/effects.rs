@@ -1778,6 +1778,9 @@ pub struct FxMaps {
     vdout: Option<Vec<f32>>,
     /// Shape layers: exact Euclidean distance outside the vector outline (from local coverage).
     vdout_exact: Option<Vec<f32>>,
+    /// Shape layers: the vector outline's coverage of each edge pixel, estimated from its
+    /// neighbours (the share of an edge pixel an outside stroke fills beneath the line).
+    vcov: Option<Vec<f32>>,
     /// `shape` joins the alpha with a filled shape's outline (`crate::effect_outline`).
     outline: bool,
     /// Frames of gradient strokes by outside width (bits): see [`stroke_frame`].
@@ -1801,7 +1804,8 @@ impl FxMaps {
             + usize::from(self.dout.is_some())
             + usize::from(self.dout_exact.is_some())
             + usize::from(self.vdout.is_some())
-            + usize::from(self.vdout_exact.is_some()))
+            + usize::from(self.vdout_exact.is_some())
+            + usize::from(self.vcov.is_some()))
             * n
             * 4
     }
@@ -1935,11 +1939,11 @@ pub(crate) fn build_maps_prepared(
     // Without an outline (unfilled shapes), estimate the vector outline from local coverage; it
     // picks the chamfer or the exact transform the same way.
     let outline = crate::effect_outline(layer).is_some();
-    let (vdout, vdout_exact) = if has_stroke && vector_shape && !outline {
+    let (vdout, vdout_exact, vcov) = if has_stroke && vector_shape && !outline {
         let lc = local_coverage(&shape);
-        (chamfer_out.then(|| dist_outside_by(&lc, Metric::Chamfer)), exact_out.then(|| dist_outside_by(&lc, Metric::Euclidean)))
+        (chamfer_out.then(|| dist_outside_by(&lc, Metric::Chamfer)), exact_out.then(|| dist_outside_by(&lc, Metric::Euclidean)), Some(lc.v))
     } else {
-        (None, None)
+        (None, None, None)
     };
     let mut frames: Vec<(u32, Rect)> = Vec::new();
     for e in &items {
@@ -1952,7 +1956,7 @@ pub(crate) fn build_maps_prepared(
             }
         }
     }
-    FxMaps { rect, shape, per, bevel_paint, din, dout, dout_exact, vdout, vdout_exact, outline, frames }
+    FxMaps { rect, shape, per, bevel_paint, din, dout, dout_exact, vdout, vdout_exact, vcov, outline, frames }
 }
 
 /// Far outside any shape (distance fill for cropped distance fields).
@@ -2212,6 +2216,7 @@ pub(crate) fn composite_with_effects_prepared(
     // coverage × opacity not yet taken by strokes above; for Normal strokes this equals stacking
     // them top over bottom.
     if strokes.iter().any(|st| widths(st).1 > 0.0) {
+        let estimated = if vector_outline { maps.vcov.as_ref().map(|c| maps.crop_vec(c, big, 1.0)) } else { None };
         let base = work.clone();
         let mut acc = vec![[0.0f32; 4]; w * h]; // premultiplied Σ share·blended
         let mut cover = vec![0.0f32; w * h];
@@ -2234,8 +2239,15 @@ pub(crate) fn composite_with_effects_prepared(
             let mut share = vec![0.0f32; w * h];
             for (i, sh) in share.iter_mut().enumerate() {
                 let band = (out_w + 0.5 - d[i]).clamp(0.0, 1.0);
-                let k =
-                    if inside(shape.v[i]) { if vector_shape && !maps.outline { 0.0 } else { band * outline_share(shape.v[i], lay.px[i][3]) } } else { band };
+                // An unfilled outline has no path to measure an edge pixel against: its coverage is
+                // estimated from its neighbours, so the stroke fills the rest of the pixel beneath
+                // the edge (a hard 0 here let the backdrop show between a line and its stroke).
+                let k = if inside(shape.v[i]) {
+                    let cov = estimated.as_ref().and_then(|c| c.get(i)).copied().unwrap_or(shape.v[i]);
+                    band * outline_share(cov, lay.px[i][3])
+                } else {
+                    band
+                };
                 let mut k = k * st.common.opacity;
                 if st.common.blend == BlendMode::Dissolve {
                     let (x, y) = (i64::from(big.x0) + (i % w) as i64, i64::from(big.y0) + (i / w) as i64);
