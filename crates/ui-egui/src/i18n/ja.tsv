@@ -3977,6 +3977,7 @@ curves	Smooth	スムーズ
 	Chisel Soft	チゼルソフト
 	Open color-less EXR as ACEScg	色空間のないEXRをACEScgとして開く
 	Do not append "copy" to filename when saving a copy	コピーを保存するときにファイル名に「copy」を付けない
+	Save As to Original Folder	「別名で保存」を元のフォルダーに
 # View › Guides › right-click a guide
 	Edit Selected Guides	選択したガイドを編集
 	Clear Selected Guides	選択したガイドを消去

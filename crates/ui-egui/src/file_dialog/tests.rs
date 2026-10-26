@@ -738,6 +738,50 @@ fn save_dialogs_remember_where_each_document_was_last_saved() {
     app.poll_file_dialog(&ctx, None);
 }
 
+/// #9656: Save As and the export dialogs start in the open document's folder by default; with
+/// Save As to Original Folder off they start in the folder last saved to, for any document.
+#[test]
+fn save_as_starts_in_the_document_folder_unless_original_folder_is_off() {
+    let (mut app, open, _) = app();
+    let ctx = egui::Context::default();
+    app.session.active_mut().unwrap().path = Some(joined("/clients/a", "design.psd"));
+    let suggested = |open: &Open| match &open.borrow()[0].0 {
+        FileDialogRequest::Save { suggested } => suggested.clone(),
+        other => panic!("save dialog expected, got {other:?}"),
+    };
+    let ask = |app: &mut PhotocraftApp, open: &Open, id: &str, answer_with: Option<&str>| {
+        menus::invoke(app, &ctx, id, json!({})).unwrap();
+        app.poll_file_dialog(&ctx, None);
+        let asked = suggested(open);
+        answer(open, answer_with.map(|p| FileDialogAnswer::SaveTo(p.into())));
+        app.poll_file_dialog(&ctx, None);
+        asked
+    };
+    // The default: Save As offers the document's own path, and nothing is remembered across documents.
+    assert!(app.session.prefs().file_handling.save_as_to_original_folder);
+    assert_eq!(ask(&mut app, &open, "file.saveAs", Some(&joined("/exports", "design.psd"))), joined("/clients/a", "design.psd"));
+    assert_eq!(app.ui.last_save_dir.as_deref(), Some(Path::new("/exports").to_string_lossy().as_ref()));
+    app.session.active_mut().unwrap().path = Some(joined("/clients/a", "design.psd"));
+    assert_eq!(ask(&mut app, &open, "file.saveAs", None), joined("/clients/a", "design.psd"));
+    // Off: the name stays, the folder is the one last saved to.
+    app.run("prefs.set", json!({"path": "fileHandling.saveAsToOriginalFolder", "value": false})).unwrap();
+    assert_eq!(ask(&mut app, &open, "file.saveAs", None), joined("/exports", "design.psd"));
+    // A bare export name follows the same rule, for a document that was never saved there.
+    app.pick_save("result.png", |_, _| Ok(Value::Null)).unwrap();
+    app.poll_file_dialog(&ctx, None);
+    assert_eq!(suggested(&open), joined("/exports", "result.png"));
+    answer(&open, None);
+    app.poll_file_dialog(&ctx, None);
+    // Nothing remembered yet: fall back to the document's folder.
+    app.ui.last_save_dir = None;
+    assert_eq!(ask(&mut app, &open, "file.saveAs", None), joined("/clients/a", "design.psd"));
+    app.pick_save("result.png", |_, _| Ok(Value::Null)).unwrap();
+    app.poll_file_dialog(&ctx, None);
+    assert_eq!(suggested(&open), joined("/clients/a", "result.png"));
+    answer(&open, None);
+    app.poll_file_dialog(&ctx, None);
+}
+
 #[test]
 fn save_suggestions_preserve_explicit_directories_and_untitled_names() {
     let (mut app, open, _) = app();

@@ -3911,6 +3911,7 @@ navigator	Zoom	Zvětšení
 	Chisel Soft	Měkké tesání
 	Open color-less EXR as ACEScg	Otevřít EXR bez údaje o barevném prostoru jako ACEScg
 	Do not append "copy" to filename when saving a copy	Nepřidávat „copy“ k názvu souboru při ukládání kopie
+	Save As to Original Folder	Uložit jako do původní složky
 
 # View › Guides › right-click a guide
 	Edit Selected Guides	Upravit vybraná vodítka

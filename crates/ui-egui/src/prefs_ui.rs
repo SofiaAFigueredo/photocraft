@@ -1287,6 +1287,9 @@ fn humanize(key: &str) -> String {
     // Performance: presentation without vsync (#1343); like the other graphics settings, it
     // takes effect when the window next opens.
     // File Handling: Photoshop's wording (#8080).
+    if key == "saveAsToOriginalFolder" {
+        return "Save As to Original Folder".into();
+    }
     if key == "doNotAppendCopy" {
         return "Do not append \"copy\" to filename when saving a copy".into();
     }

@@ -3315,6 +3315,7 @@ curves	Smooth	Glätten
 	Chisel Soft	Meißeln weich
 	Open color-less EXR as ACEScg	Farbangabenloses EXR als ACEScg öffnen
 	Do not append "copy" to filename when saving a copy	Beim Speichern einer Kopie „copy“ nicht an den Dateinamen anhängen
+	Save As to Original Folder	„Speichern unter“ im Originalordner
 # Export As metadata and profile options
 	Color Profile	Farbprofil
 	EXIF	EXIF

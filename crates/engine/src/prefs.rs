@@ -454,6 +454,9 @@ impl Default for HistoryLog {
 pub struct FileHandling {
     pub image_previews: Ask,
     pub lowercase_extension: bool,
+    /// Save As and the export dialogs start in the open document's folder (on, the default), or
+    /// in the folder last saved or exported to across documents when off (#9656, #8493).
+    pub save_as_to_original_folder: bool,
     /// File › Save a Copy suggests the document's own name rather than "<name> copy" (#8080).
     pub do_not_append_copy: bool,
     /// Saves run in the background while you keep working (on), or in the foreground under a
@@ -495,6 +498,7 @@ impl Default for FileHandling {
         Self {
             image_previews: Ask::Always,
             lowercase_extension: true,
+            save_as_to_original_folder: true,
             do_not_append_copy: false,
             save_in_background: true,
             autosave: true,
