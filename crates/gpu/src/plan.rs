@@ -1312,7 +1312,8 @@ impl<'a> Planner<'a> {
         if !outs.is_empty() {
             // The layer's alpha rides along the coverage: `effects::outline_share`, the stroke's
             // share beneath a partly covering layer (fill < 100 %) and under the edge pixels of
-            // a shape's estimated outline.
+            // a shape's estimated outline. The stroke pass reads it unconditionally, so a shape
+            // layer whose only effect is an outside stroke now pays this one init pass too.
             let mut acc: Option<Slot> = None;
             let ll = self.retain(l);
             let mut cover: Option<Slot> = Some(init(self, ll, None, INIT_COVER, 1.0));
