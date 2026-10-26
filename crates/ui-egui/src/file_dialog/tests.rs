@@ -760,7 +760,7 @@ fn save_as_starts_in_the_document_folder_unless_original_folder_is_off() {
     // The default: Save As offers the document's own path, and nothing is remembered across documents.
     assert!(app.session.prefs().file_handling.save_as_to_original_folder);
     assert_eq!(ask(&mut app, &open, "file.saveAs", Some(&joined("/exports", "design.psd"))), joined("/clients/a", "design.psd"));
-    assert_eq!(app.ui.last_save_dir.as_deref(), Some(Path::new("/exports").to_string_lossy().as_ref()));
+    assert_eq!(app.session.prefs().file_handling.last_save_folder, Path::new("/exports").to_string_lossy());
     app.session.active_mut().unwrap().path = Some(joined("/clients/a", "design.psd"));
     assert_eq!(ask(&mut app, &open, "file.saveAs", None), joined("/clients/a", "design.psd"));
     // Off: the name stays, the folder is the one last saved to.
@@ -773,13 +773,32 @@ fn save_as_starts_in_the_document_folder_unless_original_folder_is_off() {
     answer(&open, None);
     app.poll_file_dialog(&ctx, None);
     // Nothing remembered yet: fall back to the document's folder.
-    app.ui.last_save_dir = None;
+    app.run("prefs.set", json!({"path": "fileHandling.lastSaveFolder", "value": ""})).unwrap();
     assert_eq!(ask(&mut app, &open, "file.saveAs", None), joined("/clients/a", "design.psd"));
     app.pick_save("result.png", |_, _| Ok(Value::Null)).unwrap();
     app.poll_file_dialog(&ctx, None);
     assert_eq!(suggested(&open), joined("/clients/a", "result.png"));
     answer(&open, None);
     app.poll_file_dialog(&ctx, None);
+}
+
+/// #9656: with Save As to Original Folder off, File › Save of a flat file that asks for a name
+/// still offers the document's own file; only Save As moves to the remembered folder.
+#[test]
+fn plain_save_keeps_the_documents_file_when_original_folder_is_off() {
+    let ctx = egui::Context::default();
+    let path = "/pics/My image.jpg";
+    let (mut app, open, _) = jpeg_app(None, false);
+    app.opened_from(path);
+    app.run("image.adjustments.invert", json!({})).unwrap();
+    app.run("prefs.set", json!({"values": {"fileHandling.saveAsToOriginalFolder": false, "fileHandling.lastSaveFolder": "/exports"}})).unwrap();
+    for (id, expected) in [("file.save", path.to_string()), ("file.saveAs", joined("/exports", "My image.jpg"))] {
+        menus::invoke(&mut app, &ctx, id, json!({})).unwrap();
+        app.poll_file_dialog(&ctx, None);
+        assert!(matches!(&open.borrow()[0].0, FileDialogRequest::Save { suggested } if *suggested == expected), "{id}");
+        answer(&open, None);
+        app.poll_file_dialog(&ctx, None);
+    }
 }
 
 #[test]

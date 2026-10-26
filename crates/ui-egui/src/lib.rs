@@ -1814,7 +1814,9 @@ impl PhotocraftApp {
         };
         let doc = st.doc.id;
         // Save As to Original Folder off: the name stays, the folder is the one last saved to.
-        let suggested = match self.last_save_dir().filter(|_| !self.session.prefs().file_handling.save_as_to_original_folder) {
+        // File › Save of a flat file asking for a name keeps writing the document's own file.
+        let own_file = plain_save && st.path.as_deref() == Some(suggested.as_str());
+        let suggested = match self.last_save_dir().filter(|_| !own_file && !self.session.prefs().file_handling.save_as_to_original_folder) {
             Some(dir) => std::path::Path::new(&suggested).file_name().map_or(suggested.clone(), |name| dir.join(name).to_string_lossy().into_owned()),
             None => suggested,
         };

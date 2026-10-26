@@ -1782,6 +1782,8 @@ fn field_visible(section: &str, obj: &Map<String, Value>, k: &str, query: &str) 
     let drawn_elsewhere = (section == "interface" && matches!(k, "theme" | "appearanceMode" | "darkTheme" | "lightTheme" | "favoriteThemes"))
         // View › Rulers (⌘R) sets it, as in Photoshop.
         || path == "unitsAndRulers.showRulers"
+        // The folder of the last save, kept for Save As to Original Folder (#9656).
+        || path == "fileHandling.lastSaveFolder"
         || (section == "performance" && matches!(k, "useGpu" | "gpuBackend" | "gpuAdapter" | "renderingMode" | "memoryUsageMb"))
         // The browser presents frames itself: Low-Latency Drawing does nothing there.
         || (cfg!(target_arch = "wasm32") && path == "performance.lowLatencyDrawing")
@@ -3674,6 +3676,21 @@ mod tests {
         }
         assert_eq!(ctx.fonts(|f| f.definitions().font_data["Inter"].tweak.scale), 1.0);
         assert!((ctx.pixels_per_point() - 1.5).abs() < 1e-4, "resetting font size keeps UI Scale");
+    }
+
+    #[test]
+    fn the_last_save_folder_survives_a_restart() {
+        let (mut app, store) = app_with_store();
+        let ctx = egui::Context::default();
+        tick(&mut app, &ctx);
+        app.run("prefs.set", json!({"values": {"fileHandling.saveAsToOriginalFolder": false}})).unwrap();
+        app.session.prefs.edit(|p| p.file_handling.last_save_folder = "/exports".into());
+        tick(&mut app, &ctx);
+        let saved = store.lock().unwrap().clone().unwrap();
+        let (mut app2, _) = app_with_saved(Some(saved));
+        tick(&mut app2, &ctx);
+        assert_eq!(app2.session.prefs().file_handling.last_save_folder, "/exports");
+        assert_eq!(app2.last_save_dir(), Some(std::path::PathBuf::from("/exports")));
     }
 
     #[test]

@@ -1403,11 +1403,6 @@ pub struct UiState {
     /// Recently opened file paths, most-recent first (File › Open Recent). Capped; de-duplicated.
     #[serde(default)]
     pub recent_files: Vec<String>,
-    /// The folder the last save or export dialog was answered with, for any document. Save As
-    /// and export dialogs start there when Preferences ▸ File Handling › Save As to Original
-    /// Folder is off (#9656). Kept across restarts.
-    #[serde(default)]
-    pub last_save_dir: Option<String>,
     /// Recently picked type families, most-recent first (the font menu's Recent group). Capped by
     /// Preferences ▸ Type ▸ Recent Fonts; de-duplicated.
     #[serde(default)]
@@ -1687,7 +1682,6 @@ impl Default for UiState {
             group_tools: Vec::new(),
             spring: None,
             recent_files: Vec::new(),
-            last_save_dir: None,
             recent_fonts: Vec::new(),
             text_edit: None,
             caret_blink_time: 0.0,

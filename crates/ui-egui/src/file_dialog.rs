@@ -181,7 +181,8 @@ impl PhotocraftApp {
                     app.save_dirs.insert(doc, dir.to_path_buf());
                 }
                 if let Some(dir) = Path::new(&path).parent().filter(|p| !p.as_os_str().is_empty()) {
-                    app.ui.last_save_dir = Some(dir.to_string_lossy().into_owned());
+                    let dir = dir.to_string_lossy().into_owned();
+                    app.session.prefs.edit(|p| p.file_handling.last_save_folder = dir);
                 }
                 then(app, path)
             }
@@ -196,7 +197,7 @@ impl PhotocraftApp {
     /// The folder the last save or export dialog was answered with, for any document, when
     /// Preferences ▸ File Handling › Save As to Original Folder is off (#9656).
     pub(crate) fn last_save_dir(&self) -> Option<std::path::PathBuf> {
-        self.ui.last_save_dir.as_deref().filter(|d| !d.is_empty()).map(std::path::PathBuf::from)
+        Some(self.session.prefs().file_handling.last_save_folder.as_str()).filter(|d| !d.is_empty()).map(std::path::PathBuf::from)
     }
 
     /// Whether a save to `path` replaces a file the save dialog didn't ask about: the dialog
