@@ -1881,8 +1881,9 @@ pub(crate) fn map_count(layer: &Layer) -> usize {
     let has_stroke = items.iter().any(|e| matches!(e, Effect::Stroke(_)));
     let outside = usize::from(out_widths.iter().any(|&w| !stroke_outside_exact(w))) + usize::from(out_widths.iter().any(|&w| stroke_outside_exact(w)));
     let stroke = if has_stroke { 1 + outside } else { 0 };
-    let vector_outline =
-        if has_stroke && matches!(layer.content, photocraft_doc::LayerContent::Shape(_)) && crate::effect_outline(layer).is_none() { outside } else { 0 };
+    // An unfilled shape's vector outline: its distance fields and its estimated edge coverage.
+    let needs_vector_coverage = has_stroke && matches!(layer.content, photocraft_doc::LayerContent::Shape(_)) && crate::effect_outline(layer).is_none();
+    let vector_outline = if needs_vector_coverage { outside + 1 } else { 0 };
     1 + per + stroke + vector_outline
 }
 
