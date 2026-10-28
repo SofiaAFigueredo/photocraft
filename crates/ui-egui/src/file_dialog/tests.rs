@@ -801,6 +801,20 @@ fn plain_save_keeps_the_documents_file_when_original_folder_is_off() {
     }
 }
 
+/// The same for a document opened by a relative path: File › Save keeps `design.jpg`, which
+/// a bare name would otherwise move to the remembered folder.
+#[test]
+fn plain_save_keeps_a_relative_document_path_when_original_folder_is_off() {
+    let ctx = egui::Context::default();
+    let (mut app, open, _) = jpeg_app(None, false);
+    app.opened_from("design.jpg");
+    app.run("image.adjustments.invert", json!({})).unwrap();
+    app.run("prefs.set", json!({"values": {"fileHandling.saveAsToOriginalFolder": false, "fileHandling.lastSaveFolder": "/exports"}})).unwrap();
+    menus::invoke(&mut app, &ctx, "file.save", json!({})).unwrap();
+    app.poll_file_dialog(&ctx, None);
+    assert!(matches!(&open.borrow()[0].0, FileDialogRequest::Save { suggested } if suggested == "design.jpg"));
+}
+
 #[test]
 fn save_suggestions_preserve_explicit_directories_and_untitled_names() {
     let (mut app, open, _) = app();

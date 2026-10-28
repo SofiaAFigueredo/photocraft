@@ -150,6 +150,13 @@ impl PhotocraftApp {
     /// Original Folder off, a bare name starts in the folder last saved or exported to for any
     /// document instead, else beside the document (#9656).
     pub(crate) fn pick_save(&mut self, suggested: &str, then: impl FnOnce(&mut Self, String) -> Result<Value, String> + 'static) -> Result<Value, String> {
+        self.pick_save_for(suggested, false, then)
+    }
+
+    /// [`Self::pick_save`]. `own_file` marks the suggestion as the active document's own file
+    /// (File › Save of a flat file asking for a name): a relative one stays where it is instead
+    /// of moving to the last folder saved to when Save As to Original Folder is off.
+    pub(crate) fn pick_save_for(&mut self, suggested: &str, own_file: bool, then: impl FnOnce(&mut Self, String) -> Result<Value, String> + 'static) -> Result<Value, String> {
         let mut suggested = std::path::PathBuf::from(suggested);
         let doc = self.session.active().map(|d| d.doc.id);
         // Closed documents' folders are no longer needed.
@@ -158,6 +165,8 @@ impl PhotocraftApp {
         let beside_document = || self.session.active().and_then(|d| d.path.as_deref()).and_then(|p| std::path::Path::new(p).parent()).map(Path::to_path_buf);
         let remembered = if self.session.prefs().file_handling.save_as_to_original_folder {
             doc.and_then(|d| self.save_dirs.get(&d).cloned())
+        } else if own_file {
+            None
         } else {
             self.last_save_dir()
         };
