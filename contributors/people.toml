@@ -285,4 +285,7 @@ sync_github_name = true
 
 [people.SofiaAFigueredo]
 real_name = "Sofia Alves Figueredo"
-sync_github_name = false
+sync_github_name = true
+
+[people.dylanmtaylor]
+sync_github_name = true
