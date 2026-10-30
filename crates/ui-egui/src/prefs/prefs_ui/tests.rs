@@ -959,6 +959,17 @@ fn ui_font_size_commands_follow_themes_and_dpi_and_reset_live() {
 }
 
 #[test]
+fn applying_the_preferences_draft_keeps_the_live_last_save_folder() {
+    let (mut app, _) = app_with_store();
+    app.session.prefs.edit(|p| p.file_handling.last_save_folder = "/live".into());
+    // A draft taken before a Save As moved the folder still carries the old one.
+    let f = serde_json::json!({"__prefsui": "prefs", "values": {"fileHandling": {"lastSaveFolder": "/stale", "recentFileCount": 7}}});
+    super::dialogs::confirm(&mut app, f.as_object().unwrap()).unwrap();
+    assert_eq!(app.session.prefs().file_handling.recent_file_count, 7, "the other settings are applied");
+    assert_eq!(app.session.prefs().file_handling.last_save_folder, "/live");
+}
+
+#[test]
 fn the_last_save_folder_survives_a_restart() {
     let (mut app, store) = app_with_store();
     let ctx = egui::Context::default();
